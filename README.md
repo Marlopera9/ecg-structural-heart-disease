@@ -99,3 +99,57 @@ podría hacer que el modelo aprenda a detectar el marcapasos en lugar de la
 patología real), estos registros se excluyen del entrenamiento inicial. Se 
 propone como línea de trabajo futuro entrenar un modelo específico para 
 esta población.
+### 8. Ruido técnico de la señal
+El dataset incluye anotaciones de ruido eléctrico (`static_noise`, 
+`burst_noise`) y problemas de electrodos, registradas como texto libre (en 
+alemán) indicando qué derivaciones se vieron afectadas. Dada su baja 
+frecuencia y formato poco estructurado, se creará una variable binaria 
+simple (`tiene_ruido_o_problema`) para poder analizar más adelante si el 
+rendimiento del modelo empeora en estos casos, sin necesidad de interpretar 
+cada código individualmente.
+
+### 9. Distribución por sexo
+El dataset está bien balanceado por sexo: 52,1% (sexo 0) frente a 47,9% 
+(sexo 1). No se requieren ajustes adicionales en este aspecto.
+## Estructura del repositorio
+
+```
+├── data/              # Dataset (excluido de git, ver .gitignore)
+├── notebooks/         # Notebooks de exploración y experimentación
+│   └── 01_exploracion_datos.ipynb
+├── src/                # Código de producción (preprocesamiento, modelo, API)
+├── requirements.txt   # Dependencias del proyecto
+└── README.md
+```
+## Cómo reproducir el entorno
+
+```bash
+git clone https://github.com/tuusuario/ecg-structural-heart-disease.git
+cd ecg-structural-heart-disease
+python -m venv venv
+source venv/Scripts/activate  # Windows
+pip install -r requirements.txt
+```
+
+El dataset debe descargarse manualmente desde 
+[PhysioNet](https://physionet.org/content/ptb-xl/) y colocarse en la carpeta 
+`data/`.
+
+## Próximos pasos
+
+- [x] Exploración de metadatos y calidad de datos (EDA)
+- [ ] Preprocesamiento de señal: filtrado, normalización, exclusión de registros 
+- [ ] Arquitectura CNN 1D en PyTorch
+- [ ] Entrenamiento con manejo de desbalanceo de clases (Focal Loss)
+- [ ] Evaluación con AUROC / AUPRC por categoría diagnóstica
+- [ ] Explicabilidad con Grad-CAM 1D
+- [ ] Despliegue como API con FastAPI
+
+## Consideraciones éticas y de sesgos
+
+Este proyecto tiene fines exclusivamente educativos y de demostración 
+técnica. No debe utilizarse como herramienta de diagnóstico real. Cualquier 
+modelo entrenado hereda las características demográficas y clínicas del 
+dataset PTB-XL (proveniente de un centro médico en Alemania), por lo que su 
+rendimiento podría no generalizar a poblaciones con características 
+demográficas distintas.
