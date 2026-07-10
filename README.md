@@ -21,7 +21,7 @@ Se utiliza [PTB-XL](https://physionet.org/content/ptb-xl/), un dataset público
 que contiene 21.799 registros de ECG de 12 derivaciones, pertenecientes a 
 18.869 pacientes distintos.
 
-## 🔍 Hallazgos de la exploración inicial (EDA)
+## Hallazgos de la exploración inicial (EDA)
 
 Antes de tocar cualquier modelo, se realizó un análisis exploratorio para 
 entender bien la naturaleza de los datos. Estos son los hallazgos más 
