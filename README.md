@@ -4,7 +4,7 @@ Proyecto de deep learning para predecir anomalías cardíacas estructurales
 usando únicamente señales de electrocardiograma (ECG) de 12 derivaciones, 
 sin necesidad de un ecocardiograma.
 
-## Estado del proyecto: Exploración de datos completada (Fase 1/4)
+## Estado del proyecto: Exploración de datos completada (Fase 2/4)
 
 ## Motivación
 
@@ -153,3 +153,84 @@ modelo entrenado hereda las características demográficas y clínicas del
 dataset PTB-XL (proveniente de un centro médico en Alemania), por lo que su 
 rendimiento podría no generalizar a poblaciones con características 
 demográficas distintas.
+
+## Preprocesamiento de la señal
+
+Cada ECG pasa por dos transformaciones antes de entrar al modelo:
+
+1. **Filtrado paso-banda (0.5-40 Hz)**: elimina la deriva de línea base 
+   (causada por la respiración, frecuencias muy bajas) y el ruido de alta 
+   frecuencia (interferencias eléctricas). Se validó su correcto 
+   funcionamiento con una señal sintética de control antes de aplicarlo al 
+   dataset real. Sobre las señales de PTB-XL, el filtro elimina en promedio 
+   un ~15% de la "energía" de la señal — un efecto sutil pero real, 
+   consistente con el uso de equipos de grabación clínicos de buena calidad.
+2. **Normalización Z-score** por derivación: cada una de las 12 derivaciones 
+   se normaliza independientemente a media 0 y desviación estándar 1, 
+   evitando que derivaciones con amplitudes naturalmente mayores dominen 
+   el aprendizaje.
+
+Los datos procesados se dividen en train/val/test usando el `strat_fold` 
+oficial de PTB-XL (documentado en la Fase 1), y se guardan en formato 
+`.npy` para una carga eficiente durante el entrenamiento.
+
+## Arquitectura del modelo
+
+Se implementó una red neuronal convolucional 1D (CNN 1D) en PyTorch, 
+diseñada específicamente para series temporales biomédicas:
+
+- 3 bloques convolucionales (32 → 64 → 128 canales), cada uno con 
+  Batch Normalization, activación ReLU y MaxPooling, para detectar 
+  patrones morfológicos a distintas escalas temporales.
+- Un clasificador final con Dropout (0.3) para reducir el riesgo de 
+  sobreajuste.
+- Salida de 5 valores (uno por categoría diagnóstica: NORM, MI, STTC, CD, 
+  HYP), tratando el problema como clasificación multi-etiqueta.
+
+Se verificó el correcto funcionamiento de principio a fin (carga de datos → 
+Dataset → DataLoader → modelo) mediante un smoke test con un batch de 
+ejemplo, antes de proceder a la fase de entrenamiento.
+
+## Problemas encontrados y soluciones en la Fase 2
+
+Durante esta fase surgieron varios problemas técnicos reales. Se documentan 
+aquí porque forman parte del proceso de aprendizaje y pueden ahorrar tiempo 
+a cualquiera que reproduzca este proyecto en Windows.
+
+**1. Aviso falso de "módulo no encontrado" en el editor**
+El editor marcaba `wfdb` como no encontrado en los archivos `.py`, aunque el 
+notebook sí lo reconocía sin problema. Causa: VS Code usa dos configuraciones 
+de Python distintas — una para los notebooks (el "kernel") y otra para los 
+archivos `.py` sueltos (el "intérprete del editor"). Bastaba con fijar 
+manualmente el intérprete del editor al entorno `venv` del proyecto 
+(`Python: Select Interpreter`) para que ambas configuraciones coincidieran.
+
+**2. El filtro de la señal parecía no hacer nada**
+Al comparar visualmente la señal ECG antes y después del filtrado, las 
+gráficas parecían casi idénticas. Para comprobar si era un error de código o 
+un rasgo real del dataset, se validó el filtro con una señal sintética 
+generada a propósito con ruido conocido, y se midió numéricamente la 
+diferencia (residuo) entre la señal cruda y la filtrada. Conclusión: el 
+filtro funcionaba correctamente; el efecto era sutil porque las señales de 
+PTB-XL ya vienen relativamente limpias, al proceder de equipos clínicos.
+
+**3. Error al guardar los datos procesados (`FileNotFoundError`)**
+Tras procesar los más de 21.000 ECGs (proceso de varios minutos), el guardado 
+final falló porque la carpeta de destino se había creado con un error 
+tipográfico (`proccesed` en vez de `processed`). Se corrigió el nombre de la 
+carpeta y se repitió el procesamiento.
+
+**4. Error de carga de PyTorch (`OSError: WinError 1114`)**
+Al importar `torch` por primera vez, Windows no conseguía cargar uno de sus 
+archivos internos (`c10.dll`). Se descartaron como causa tanto la falta del 
+Visual C++ Redistributable como un posible conflicto con la sincronización de 
+OneDrive (ambos verificados explícitamente). La solución fue reinstalar 
+PyTorch fijando una versión concreta y estable (`torch==2.4.1`) en lugar de 
+la última versión disponible, que presentaba el conflicto.
+
+**5. `ModuleNotFoundError: No module named 'src'` tras reiniciar el kernel**
+Después de reiniciar el kernel del notebook (necesario para solucionar el 
+problema anterior), las importaciones desde `src/` dejaron de funcionar. 
+Causa: la configuración que añade la carpeta raíz del proyecto a las rutas de 
+búsqueda de Python (`sys.path.append('..')`) solo persiste mientras el kernel 
+está activo, y debe volver a ejecutarse tras cada reinicio.
