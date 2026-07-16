@@ -235,7 +235,19 @@ Causa: la configuración que añade la carpeta raíz del proyecto a las rutas de
 búsqueda de Python (`sys.path.append('..')`) solo persiste mientras el kernel 
 está activo, y debe volver a ejecutarse tras cada reinicio.
 
-## 🏋️ Entrenamiento
+**6. Resultados ligeramente distintos al reentrenar sin cambiar el código**
+Tras reiniciar el kernel (por un cambio de idioma del sistema operativo que 
+afectó a Visual Studio Code) y volver a ejecutar el entrenamiento, se 
+obtuvieron métricas ligeramente distintas a la ejecución anterior, pese a 
+no modificar nada del código. Causa: no se había fijado una semilla 
+aleatoria, por lo que la inicialización de pesos del modelo y el orden de 
+mezclado de los datos (`shuffle=True`) variaban en cada ejecución. Se 
+añadió la función `fijar_semilla()` (`src/utils.py`), que fija las semillas 
+de Python, NumPy y PyTorch, garantizando resultados reproducibles en 
+entrenamientos futuros. La consistencia entre ambas ejecuciones (AUROC 
+macro ≈ 0,908 en ambas) sirvió además para confirmar que el resultado del 
+modelo es robusto, y no producto del azar de una única ejecución afortunada.
+## Entrenamiento
 
 Se entrenó el modelo `ECG_CNN1D` usando **Focal Loss** (α=0.25, γ=2.0) en 
 lugar de una función de pérdida estándar, precisamente para compensar el 
@@ -277,13 +289,14 @@ no vio en ningún momento durante el entrenamiento ni la validación:
 
 | Clase | AUROC | AUPRC | Prevalencia en el dataset |
 |-------|-------|-------|---------------------------|
-| NORM  | 0.940 | 0.919 |         43,6%             |
-| MI    | 0.926 | 0.826 |         25,1%             |
-| STTC  | 0.931 | 0.821 |         24,0%             |
-| CD    | 0.914 | 0.832 |         22,5%             |
-| HYP   | 0.829 | 0.481 |         12,2%             |
+| NORM  | 0.936 | 0.910 |          43,6%            |
+| MI    | 0.917 | 0.820 |          25,1%            |
+| STTC  | 0.931 | 0.818 |          24,0%            |
+| CD    | 0.912 | 0.832 |          22,5%            |
+| HYP   | 0.832 | 0.484 |          12,2%            |
 
-**AUROC macro: 0,908** &nbsp;|&nbsp; **AUPRC macro: 0,776**
+**AUROC macro: 0,906** &nbsp;|&nbsp; **AUPRC macro: 0,773**
+
 
 ![Curvas ROC](assets/curvas_roc.png)
 ![Curvas Precision-Recall](assets/curvas_precision_recall.png)
@@ -315,3 +328,11 @@ distinto y más accesible al de detectar patología estructural que **no**
 es evidente en una lectura convencional del ECG (el objetivo, por ejemplo, 
 del dataset EchoNext, mencionado como posible extensión futura de este 
 proyecto).
+
+**Nota sobre reproducibilidad:** tras detectar que los resultados variaban 
+ligeramente entre ejecuciones por no tener una semilla aleatoria fija, se 
+implementó `fijar_semilla()` (`src/utils.py`), que controla la 
+inicialización de pesos del modelo y el orden de mezclado de los datos. 
+Con la semilla fijada (valor 42), el entrenamiento converge de forma 
+determinista a un AUROC macro de 0,906 en la época 29, resultado 
+totalmente reproducible en ejecuciones futuras del mismo código.
