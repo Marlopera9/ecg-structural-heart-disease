@@ -4,7 +4,7 @@ Proyecto de deep learning para predecir anomalías cardíacas estructurales
 usando únicamente señales de electrocardiograma (ECG) de 12 derivaciones, 
 sin necesidad de un ecocardiograma.
 
-## Estado del proyecto: Exploración de datos completada (Fase 2/4)
+## Estado del proyecto: Exploración de datos completada (Fase 3/4)
 
 ## Motivación
 
@@ -138,10 +138,10 @@ El dataset debe descargarse manualmente desde
 ## Próximos pasos
 
 - [x] Exploración de metadatos y calidad de datos (EDA)
-- [ ] Preprocesamiento de señal: filtrado, normalización, exclusión de registros 
-- [ ] Arquitectura CNN 1D en PyTorch
-- [ ] Entrenamiento con manejo de desbalanceo de clases (Focal Loss)
-- [ ] Evaluación con AUROC / AUPRC por categoría diagnóstica
+- [x] Preprocesamiento de señal: filtrado, normalización, exclusión de registros 
+- [x] Arquitectura CNN 1D en PyTorch
+- [x] Entrenamiento con manejo de desbalanceo de clases (Focal Loss)
+- [x] Evaluación con AUROC / AUPRC por categoría diagnóstica
 - [ ] Explicabilidad con Grad-CAM 1D
 - [ ] Despliegue como API con FastAPI
 
@@ -234,3 +234,84 @@ problema anterior), las importaciones desde `src/` dejaron de funcionar.
 Causa: la configuración que añade la carpeta raíz del proyecto a las rutas de 
 búsqueda de Python (`sys.path.append('..')`) solo persiste mientras el kernel 
 está activo, y debe volver a ejecutarse tras cada reinicio.
+
+## 🏋️ Entrenamiento
+
+Se entrenó el modelo `ECG_CNN1D` usando **Focal Loss** (α=0.25, γ=2.0) en 
+lugar de una función de pérdida estándar, precisamente para compensar el 
+desbalanceo de clases detectado en la Fase 1 (la clase `HYP` representa solo 
+un 12,2% de los registros frente al 43,6% de `NORM`). Esta función reduce 
+el peso de aprendizaje de los ejemplos que el modelo ya clasifica bien, 
+obligándolo a prestar más atención relativa a los casos difíciles o 
+minoritarios.
+
+El modelo se entrenó con el optimizador Adam (tasa de aprendizaje 1e-3), 
+guardando en cada época únicamente si mejoraba el AUROC macro en el 
+conjunto de **validación** (nunca en entrenamiento, para evitar decisiones 
+sesgadas).
+
+![Curvas de entrenamiento](assets/curvas_entrenamiento.png)
+
+### Experimento: ¿merece la pena entrenar más épocas?
+
+Se realizó una prueba entrenando 40 épocas (el doble de lo inicialmente 
+planeado) para comprobar si el modelo seguía mejorando. El resultado fue 
+claro: a partir de aproximadamente la época 10, la pérdida de validación 
+empezó a subir de forma sostenida mientras la de entrenamiento seguía 
+bajando — la señal clásica de **sobreajuste** (overfitting), es decir, el 
+modelo memorizando detalles del set de entrenamiento en vez de aprender 
+patrones generalizables. En consonancia, el AUROC de validación alcanzó su 
+mejor valor en la **época 8** (0,9106) y fue empeorando gradualmente después, 
+pese al ruido natural entre épocas.
+
+Gracias a la estrategia de guardar solo el mejor modelo según AUROC de 
+validación, el modelo final utilizado en este proyecto corresponde a esa 
+época temprana y no se ve afectado por el sobreajuste posterior — 
+demostrando en la práctica por qué esta estrategia de checkpointing es 
+una buena práctica estándar en Machine Learning.
+
+## Resultados en el conjunto de test
+
+Evaluación final sobre el conjunto de test (fold 10), datos que el modelo 
+no vio en ningún momento durante el entrenamiento ni la validación:
+
+| Clase | AUROC | AUPRC | Prevalencia en el dataset |
+|-------|-------|-------|---------------------------|
+| NORM  | 0.940 | 0.919 |         43,6%             |
+| MI    | 0.926 | 0.826 |         25,1%             |
+| STTC  | 0.931 | 0.821 |         24,0%             |
+| CD    | 0.914 | 0.832 |         22,5%             |
+| HYP   | 0.829 | 0.481 |         12,2%             |
+
+**AUROC macro: 0,908** &nbsp;|&nbsp; **AUPRC macro: 0,776**
+
+![Curvas ROC](assets/curvas_roc.png)
+![Curvas Precision-Recall](assets/curvas_precision_recall.png)
+
+### Cómo interpretar estos resultados
+
+- **AUROC** mide qué tan bien distingue el modelo entre un ECG con la 
+  patología y uno sin ella, en general. Un valor de 0,908 significa que, en 
+  aproximadamente 9 de cada 10 comparaciones, el modelo puntúa más alto al 
+  ECG que realmente tiene la anomalía.
+- **AUPRC** es más exigente en datasets desbalanceados: mide cuánto acierta 
+  el modelo entre todo lo que marca como positivo, y cuántos casos reales 
+  consigue detectar. Por eso se reporta junto al AUROC, en vez de solo este 
+  último.
+- **La clase `HYP` es, con diferencia, la más difícil para el modelo** 
+  (AUROC 0,829, AUPRC 0,481), consistente con ser la clase minoritaria del 
+  dataset. Aun así, su AUPRC es casi 4 veces superior al que se obtendría 
+  adivinando al azar (≈0,122, su prevalencia), lo que indica que el modelo 
+  sí aprendió señal real sobre esta clase, aunque con menos confianza que 
+  en las demás.
+
+### Nota importante sobre el alcance de estos resultados
+
+Los diagnósticos de PTB-XL (`NORM`, `MI`, `STTC`, `CD`, `HYP`) son hallazgos 
+que un cardiólogo puede identificar leyendo directamente el ECG — de hecho, 
+así se etiquetó originalmente el dataset. Este proyecto demuestra que un 
+modelo puede automatizar esa lectura con alta fiabilidad, pero es un reto 
+distinto y más accesible al de detectar patología estructural que **no** 
+es evidente en una lectura convencional del ECG (el objetivo, por ejemplo, 
+del dataset EchoNext, mencionado como posible extensión futura de este 
+proyecto).
