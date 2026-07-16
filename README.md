@@ -235,7 +235,7 @@ Causa: la configuración que añade la carpeta raíz del proyecto a las rutas de
 búsqueda de Python (`sys.path.append('..')`) solo persiste mientras el kernel 
 está activo, y debe volver a ejecutarse tras cada reinicio.
 
-## 🏋️ Entrenamiento
+## Entrenamiento
 
 Se entrenó el modelo `ECG_CNN1D` usando **Focal Loss** (α=0.25, γ=2.0) en 
 lugar de una función de pérdida estándar, precisamente para compensar el 
