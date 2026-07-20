@@ -4,7 +4,7 @@ Proyecto de deep learning para predecir anomalías cardíacas estructurales
 usando únicamente señales de electrocardiograma (ECG) de 12 derivaciones,
 sin necesidad de un ecocardiograma.
 
-## Estado del proyecto: Entrenamiento y evaluación completados (Fase 3/4)
+## Estado del proyecto: Entrenamiento y evaluación completados (Fase 4/4)
 
 ## Motivación
 
@@ -220,6 +220,68 @@ así, su AUPRC es casi 4 veces superior al que se obtendría adivinando al
 azar (≈0,122, su prevalencia), señal de que el modelo sí aprendió algo real
 sobre esta clase, aunque con menos confianza que en el resto.
 
+## Explicabilidad (Grad-CAM 1D)
+
+Para entender en qué se basa el modelo al predecir, se implementó Grad-CAM
+adaptado a señales 1D, aplicado sobre la última capa convolucional antes
+del pooling global. El resultado es un mapa de calor que muestra qué
+instantes de tiempo del ECG influyeron más en cada predicción.
+
+![Grad-CAM ejemplo HYP](assets/gradcam_hyp_ejemplo.png)
+
+En el ejemplo de arriba, un caso real de hipertrofia (clase HYP), el modelo
+concentra la atención en zonas concretas del latido en lugar de "mirar" la
+señal completa de forma difusa. Esto sugiere que aprendió patrones
+morfológicos localizados y no simplemente ruido de fondo.
+
+## API de inferencia
+
+El modelo se expone mediante una API REST construida con FastAPI:
+
+```bash
+uvicorn src.api:app --reload
+```
+
+Documentación interactiva disponible en `http://127.0.0.1:8000/docs`
+(Swagger UI, generada automáticamente por FastAPI a partir del código).
+
+Ejemplo de petición desde Python:
+
+```python
+import requests
+
+respuesta = requests.post(
+    "http://127.0.0.1:8000/predecir",
+    json={"señal": señal_ecg_cruda.tolist()}  # forma (1000, 12), sin preprocesar
+)
+print(respuesta.json())
+# {"NORM": 0.12, "MI": 0.05, "STTC": 0.08, "CD": 0.03, "HYP": 0.91}
+```
+
+La API aplica internamente el mismo pipeline de preprocesamiento
+(filtrado paso-banda + normalización Z-score) documentado más arriba, por
+lo que acepta directamente señales crudas de un ECG estándar de 12
+derivaciones.
+
+### Despliegue con Docker
+
+La API está empaquetada en un contenedor Docker para poder ejecutarse en
+cualquier máquina sin instalar Python ni sus dependencias manualmente:
+
+```bash
+docker build -t ecg-api .
+docker run -p 8000:8000 ecg-api
+```
+
+Un primer intento de construcción falló porque el `requirements.txt`,
+generado en Windows, incluía tanto dependencias exclusivas de Windows (de
+Jupyter) como una versión de PyTorch con la etiqueta `+cpu`, que solo
+existe en el índice especial de PyTorch y no en el índice estándar de
+Python usado dentro de contenedores Linux. La solución fue crear un
+`requirements-api.txt` reducido, con solo las dependencias que la API
+necesita, e instalar PyTorch en un paso separado del `Dockerfile`,
+apuntando explícitamente a su índice.
+
 ### Sobre el alcance de estos resultados
 
 Los diagnósticos de PTB-XL (NORM, MI, STTC, CD, HYP) son hallazgos que un
@@ -288,6 +350,17 @@ consistencia entre las distintas ejecuciones, con o sin semilla, sirvió
 además para confirmar que el rendimiento del modelo es robusto y no
 producto de una inicialización afortunada.
 
+**7. Fallo al construir la imagen Docker (`pip install ... exit code: 1`).**
+El `requirements.txt`, generado con `pip freeze` en Windows, no era
+directamente compatible con un contenedor Linux: contenía paquetes
+exclusivos de Windows (dependencias internas de Jupyter) y una versión de
+PyTorch con la etiqueta `+cpu`, que solo existe en el índice especial de
+PyTorch, no en el índice estándar de Python que usa pip por defecto dentro
+del contenedor. Se resolvió creando un `requirements-api.txt` reducido,
+con solo las dependencias que la API necesita, e instalando PyTorch en un
+paso separado del `Dockerfile`, indicando explícitamente su índice.
+
+
 ## Estructura del repositorio
 
 ```
@@ -342,8 +415,8 @@ carpeta `data/`.
 - [x] Arquitectura CNN 1D en PyTorch
 - [x] Entrenamiento con manejo de desbalanceo de clases (Focal Loss)
 - [x] Evaluación con AUROC / AUPRC por categoría diagnóstica
-- [ ] Explicabilidad con Grad-CAM 1D
-- [ ] Despliegue como API con FastAPI
+- [x] Explicabilidad con Grad-CAM 1D
+- [x] Despliegue como API con FastAPI
 
 ## Consideraciones éticas y de sesgos
 
