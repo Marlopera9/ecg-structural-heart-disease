@@ -50,3 +50,24 @@ def evaluar(modelo, loader, funcion_perdida, dispositivo):
     etiquetas_reales = torch.cat(todas_etiquetas).numpy()
 
     return perdida_promedio, predicciones, etiquetas_reales
+
+class EarlyStopping:
+    """
+    Detiene el entrenamiento si el AUROC de validación no mejora durante
+    'paciencia' épocas consecutivas, para no malgastar tiempo de cómputo
+    una vez que el modelo ya dejó de aprender algo nuevo.
+    """
+
+    def __init__(self, paciencia=8):
+        self.paciencia = paciencia
+        self.mejor_auroc = 0.0
+        self.épocas_sin_mejora = 0
+
+    def debe_parar(self, auroc_actual):
+        if auroc_actual > self.mejor_auroc:
+            self.mejor_auroc = auroc_actual
+            self.épocas_sin_mejora = 0
+        else:
+            self.épocas_sin_mejora += 1
+
+        return self.épocas_sin_mejora >= self.paciencia

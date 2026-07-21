@@ -165,6 +165,20 @@ El optimizador fue Adam (tasa de aprendizaje 1e-3), guardando el modelo en
 cada época solo si mejoraba el AUROC macro en el conjunto de
 **validación** — nunca en entrenamiento, para no sesgar la decisión.
 
+**Nota adicional sobre reproducibilidad:** incluso con la semilla fijada
+justo antes del entrenamiento, la época exacta del mejor modelo varió
+ligeramente entre ejecuciones (época 29, 17 y 24 en tres ejecuciones
+distintas). La causa es el paralelismo multihilo de las operaciones de
+PyTorch en CPU: la suma en punto flotante no es estrictamente asociativa,
+y el orden de combinación entre hilos varía según la planificación del
+sistema operativo, introduciendo pequeñas diferencias numéricas que se
+acumulan a lo largo del entrenamiento. El nivel de rendimiento final fue
+notablemente estable en las tres ejecuciones (AUROC macro entre 0,911 y
+0,914), lo que confirma que el resultado es robusto pese a esta variación.
+Una reproducibilidad exacta requeriría forzar ejecución en un solo hilo
+(`torch.set_num_threads(1)`), a costa de un entrenamiento notablemente
+más lento.
+
 ![Curvas de entrenamiento](assets/curvas_entrenamiento.png)
 
 ### ¿Merece la pena entrenar más épocas?
@@ -192,17 +206,37 @@ no vio en ningún momento durante el entrenamiento ni la validación:
 
 | Clase | AUROC | AUPRC | Prevalencia en el dataset  |
 |-------|-------|-------|----------------------------|
-| NORM  | 0.936 | 0.910 | 43,6%                      |
-| MI    | 0.917 | 0.820 | 25,1%                      |
-| STTC  | 0.931 | 0.818 | 24,0%                      |
-| CD    | 0.912 | 0.832 | 22,5%                      |
-| HYP   | 0.832 | 0.484 | 12,2%                      |
+| NORM  | 0.940 | 0.919 | 43,6%                      |
+| MI    | 0.924 | 0.832 | 25,1%                      |
+| STTC  | 0.936 | 0.829 | 24,0%                      |
+| CD    | 0.916 | 0.841 | 22,5%                      |
+| HYP   | 0.840 | 0.482 | 12,2%                      |
 
-**AUROC macro: 0,906** · **AUPRC macro: 0,773**
+**AUROC macro: 0,911** · **AUPRC macro: 0,781**
 
 ![Curvas ROC](assets/curvas_roc.png)
 ![Curvas Precision-Recall](assets/curvas_precision_recall.png)
 
+### Matriz de confusión (umbral 0,5)
+
+![Matrices de confusión](assets/matrices_confusion.png)
+
+Con el umbral de decisión por defecto (0,5), el recall (sensibilidad) varía
+mucho entre clases: entre el 52-66% para NORM, MI, STTC y CD, pero solo el
+13,4% para HYP. Es decir, aunque el modelo aprendió señal real sobre HYP
+(reflejado en su AUROC de 0,840), con este umbral deja pasar sin marcar a
+la mayoría de los casos reales de esa clase. La precisión en cambio es
+alta en todas las clases (81-93%): cuando el modelo predice positivo,
+suele acertar.
+
+Esto sugiere que, para un uso real como herramienta de cribado, el umbral
+de 0,5 no es necesariamente el más adecuado para clases minoritarias como
+HYP — un umbral más bajo, específico para esa clase, probablemente
+mejoraría el recall a costa de algunos falsos positivos adicionales,
+un balance preferible en un contexto de detección temprana. Se deja como
+línea de trabajo futura optimizar el umbral por clase (por ejemplo,
+maximizando el F1-score o el estadístico J de Youden en el conjunto de
+validación).
 ### Cómo interpretar estos resultados
 
 AUROC mide qué tan bien distingue el modelo entre un ECG con la patología y
