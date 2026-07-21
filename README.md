@@ -397,11 +397,17 @@ paso separado del `Dockerfile`, indicando explícitamente su índice.
 
 ## Estructura del repositorio
 
+## Estructura del repositorio
+
 ```
 ├── assets/                       # Gráficas generadas para este README
 │   ├── curvas_entrenamiento.png
 │   ├── curvas_roc.png
-│   └── curvas_precision_recall.png
+│   ├── curvas_precision_recall.png
+│   ├── matrices_confusion.png
+│   ├── gradcam_hyp_ejemplo.png
+│   ├── gradcam_norm_ejemplo.png
+│   └── gradcam_mi_ejemplo.png
 ├── data/                         # Dataset (excluido de git, ver .gitignore)
 ├── models/                       # Modelo entrenado y resultados
 │   ├── mejor_modelo.pt
@@ -409,7 +415,8 @@ paso separado del `Dockerfile`, indicando explícitamente su índice.
 ├── notebooks/
 │   ├── 01_exploracion_datos.ipynb
 │   ├── 02_preprocesamiento.ipynb
-│   └── 03_entrenamiento.ipynb
+│   ├── 03_entrenamiento.ipynb
+│   └── 04_explicabilidad.ipynb
 ├── src/
 │   ├── __init__.py
 │   ├── data_utils.py             # Limpieza de metadatos
@@ -417,9 +424,17 @@ paso separado del `Dockerfile`, indicando explícitamente su índice.
 │   ├── dataset.py                # Dataset de PyTorch
 │   ├── model.py                  # Arquitectura CNN 1D
 │   ├── losses.py                 # Focal Loss multi-etiqueta
-│   ├── train.py                  # Bucle de entrenamiento y evaluación
-│   └── utils.py                  # Semilla aleatoria (reproducibilidad)
+│   ├── train.py                  # Entrenamiento, evaluación y EarlyStopping
+│   ├── utils.py                  # Semilla aleatoria (reproducibilidad)
+│   ├── gradcam.py                # Explicabilidad (Grad-CAM 1D)
+│   └── api.py                    # API REST con FastAPI
+├── tests/                        # Suite de tests automatizados (pytest)
+│   ├── test_preprocessing.py
+│   ├── test_model.py
+│   └── test_api.py
+├── Dockerfile
 ├── requirements.txt
+├── requirements-api.txt          # Dependencias mínimas para la API/Docker
 └── README.md
 ```
 
