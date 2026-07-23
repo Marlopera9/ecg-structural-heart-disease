@@ -436,6 +436,63 @@ El umbral óptimo a elegir depende estrictamente del contexto clínico:
 
 Para ofrecer total flexibilidad, la API entrega la probabilidad cruda (el porcentaje directo de sospecha) sin aplicar ningún filtro previo. De esta manera, la responsabilidad y la decisión final del umbral quedan en manos del equipo médico o técnico que integre la herramienta en el flujo clínico real.
 
+## Análisis de sesgos por edad y sexo
+
+Para comprobar empíricamente si el modelo funciona de forma equitativa
+entre distintos subgrupos demográficos, se evaluó el AUROC por sexo y por
+grupo de edad sobre el conjunto de test.
+
+![Sesgo por edad y sexo](assets/sesgo_edad_sexo.png)
+
+### Por sexo
+
+| Clase | AUROC sexo 0 | AUROC sexo 1 | Diferencia |
+|-------|--------------|--------------|------------|
+| NORM  |    0.948     |    0.933     |   +0.015   |
+| MI    |    0.937     |    0.909     |   +0.027   |
+| STTC  |    0.951     |    0.918     |   +0.033   |
+| CD    |    0.928     |    0.904     |   +0.023   |
+| HYP   |    0.847     |    0.833     |   +0.014   |
+
+**AUROC macro: 0,922 (sexo 0) frente a 0,900 (sexo 1)**, sobre muestras de
+tamaño comparable (1.109 y 1.047 registros respectivamente).
+
+La diferencia favorece a sexo 0 en las 5 categorías diagnósticas sin
+excepción, lo que sugiere un sesgo sistemático real y no una fluctuación
+aleatoria del muestreo (si fuera ruido, cabría esperar que la dirección
+variara entre clases). La magnitud es moderada, pero
+consistente. Sería necesario un análisis estadístico más formal para cuantificar la
+significancia de esta diferencia, algo que queda como trabajo futuro.
+
+### Por edad
+
+| Grupo      | N   | AUROC macro   |
+|------------|-----|---------------|
+| ≤45 años   | 427 |    0.912      |
+| 46-60 años | 536 |    0.902      |
+| 61-75 años | 708 |    0.900      |
+| 76-89 años | 453 |    0.882      |
+| 90+ años   | 32  | No calculable |
+
+Se observa una tendencia monótona: el rendimiento del modelo disminuye de
+forma progresiva y constante según aumenta la edad del paciente, sin
+ninguna inversión en los 4 grupos con muestra suficiente. Para el grupo de
+90+ años, el tamaño de muestra (32 registros) fue insuficiente para al
+menos una de las 5 categorías diagnósticas, que no presentó ningún caso
+positivo en ese subgrupo — el AUROC no es matemáticamente calculable en
+esas condiciones.
+
+### Conclusión de este análisis
+
+El modelo muestra un rendimiento moderadamente inferior tanto en pacientes
+de sexo 1 (mujer) como en pacientes de mayor edad, con una tendencia
+particularmente clara y consistente en el caso de la edad. Esto es
+coherente con la advertencia general ya presente en la sección de
+consideraciones éticas: el dataset proviene de un único centro médico
+alemán, y no hay garantía de que su composición demográfica sea
+representativa de otras poblaciones. Este análisis convierte esa
+advertencia genérica en una limitación cuantificada y documentada,
+en lugar de una suposición sin verificar.
 
 ## Estructura del repositorio
 
