@@ -395,7 +395,47 @@ con solo las dependencias que la API necesita, e instalando PyTorch en un
 paso separado del `Dockerfile`, indicando explícitamente su índice.
 
 
-## Estructura del repositorio
+### Optimización del umbral de decisión para HYP
+
+Con el umbral por defecto (0,5), el recall de HYP era muy bajo (13,4% en
+test), pese a que su AUROC (0,840) mostraba que el modelo sí tenía
+información útil sobre esta clase — el problema no era el modelo, sino
+un umbral de decisión mal calibrado para una clase tan minoritaria.
+
+Se exploró el efecto de mover el umbral de decisión sobre el conjunto de
+**validación** (nunca sobre test, para no sesgar la elección):
+
+|      Umbral        | Recall (val) | Precisión (val) |
+|--------------------|--------------|-----------------|
+| 0,50 (por defecto) |      9,7%    |       83,9%     |
+| 0,40               |      29,2%   |       63,9%     |
+| 0,30               |      58,4%   |       41,4%     |
+| **0,263**          |    **74,5%** |       **—**     |
+| 0,20               |      89,1%   |       21,6%     |
+| 0,15               |      97,4%   |       16,9%     |
+
+![Elección del umbral para HYP](assets/umbral_hyp.png)
+
+El estadístico de Youden (que busca el punto de equilibrio matemático
+entre sensibilidad y especificidad) señala 0,263 como umbral recomendado.
+Validado en el conjunto de **test** (que no participó en la elección):
+
+|         Umbral         | Recall (test) | Precisión (test) |
+|------------------------|---------------|------------------|
+| 0,50 (por defecto)     |     13,4%     |        81,4%     |
+| 0,263 (optimizado)     |     72,1%     |        30,4%     |
+
+Este ajuste representa un compromiso técnico y no una mejora automática sin consecuencias. 
+
+Al bajar el umbral de decisión, logramos multiplicar por más de cinco la capacidad de detectar casos reales de la enfermedad (HYP). El beneficio directo es que aumentamos el recall (sensibilidad), lo que garantiza que es mejor tener falsos positivos que falsos negativos, ya que así evitamos pasar por alto a un paciente enfermo. La consecuencia de esta estrategia es que la mayoría de las alertas positivas serán falsas alarmas, reduciendo la precisión al 30%.
+
+El umbral óptimo a elegir depende estrictamente del contexto clínico:
+
+* **Cribado poblacional**: Si el sistema se usa para una detección masiva seguida de la revisión de un médico, es totalmente razonable priorizar el recall para no perder ningún caso.
+* **Acciones automáticas**: Si el sistema activa directamente tratamientos o procedimientos médicos costosos, un umbral intermedio (como 0.35 - 0.40) es una opción más prudente.
+
+Para ofrecer total flexibilidad, la API entrega la probabilidad cruda (el porcentaje directo de sospecha) sin aplicar ningún filtro previo. De esta manera, la responsabilidad y la decisión final del umbral quedan en manos del equipo médico o técnico que integre la herramienta en el flujo clínico real.
+
 
 ## Estructura del repositorio
 
