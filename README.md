@@ -394,6 +394,17 @@ del contenedor. Se resolvió creando un `requirements-api.txt` reducido,
 con solo las dependencias que la API necesita, e instalando PyTorch en un
 paso separado del `Dockerfile`, indicando explícitamente su índice.
 
+**8. El botón de ejemplo aleatorio en Streamlit no actualizaba la pantalla.**
+En Streamlit, cualquier interacción del usuario vuelve a ejecutar el código de la página desde el principio. Al pulsar el botón para elegir un ECG al azar, el script generaba el número aleatorio pero el menú desplegable (`selectbox`) volvía a cargarse con su valor previo, anulando el cambio. 
+**Solución:** Se utilizó el gestor de estado de la aplicación (`st.session_state`) junto con una función de respuesta (*callback*) en el botón (`on_click`), manteniendo la selección sincronizada entre recargas.
+
+**9. Error de índices al cargar registros de PhysioNet con un número de derivaciones distinto a 12.**
+Al probar la subida de archivos externos, algunos registros causaban fallos de índice (`IndexError`). Esto ocurre porque existen estudios de monitoreo (como monitores Holter) que solo registran 2 derivaciones, mientras que nuestra red neuronal y el visor gráfico requieren las 12 derivaciones estándar de un ECG clínico.
+ **Solución:** Se integró una validación geométrica en la barra lateral que comprueba los canales de la señal antes de cargarla, notificando amigablemente al usuario si el archivo no cumple con el mínimo necesario.
+
+**10. Fallo al leer registros de 15 derivaciones por falta del archivo `.xyz` (`FileNotFoundError`).**
+Al subir ciertos registros de PhysioNet (como `s0010_re`), la librería `wfdb` intentaba cargar 15 derivaciones: las 12 estándar clínicas más 3 adicionales llamadas ortogonales (o de Frank: $v_x, v_y, v_z$). El archivo de cabecera `.hea` indicaba que esas 3 derivaciones extra se guardaban en un archivo aparte (`.xyz`). Como el usuario solo sube el `.hea` y el `.dat`, la librería fallaba al no encontrar el `.xyz`. 
+**Solución:** Se modificó la lectura para inspeccionar primero únicamente la cabecera de texto (`wfdb.rdheader`) y ordenar a la función de lectura que extraiga exclusivamente los primeros 12 canales (`channels=list(range(12))`). De este modo, el sistema lee directamente el archivo `.dat`, ignora el `.xyz` ausente y procesa la señal sin solicitar archivos innecesarios.
 
 ### Optimización del umbral de decisión para HYP
 
@@ -494,6 +505,21 @@ representativa de otras poblaciones. Este análisis convierte esa
 advertencia genérica en una limitación cuantificada y documentada,
 en lugar de una suposición sin verificar.
 
+## Interfaz web interactiva (Streamlit)
+
+Para facilitar el uso del modelo sin necesidad de enviar peticiones HTTP manualmente, se desarrolló una aplicación web con **Streamlit**:
+
+```bash
+streamlit run app/streamlit_app.py
+
+ - Permite cargar ejemplos de prueba precargados en el sistema para evaluar su comportamiento. La interfaz muestra los datos demográficos del paciente (como edad y sexo) y ofrece una comparación visual directa para verificar si la predicción del modelo acierta con el diagnóstico real.
+
+- Cuenta con una pestaña dedicada para la subida de archivos médicos reales en formatos estándar de la industria (combinación de archivos `.hea` y `.dat` de PhysioNet). El sistema se encarga de ingerir los datos crudos, adaptarlos y enviarlos directamente a la red neuronal para su procesamiento.
+
+- La interfaz detecta de forma automatizada el estado de la señal: identifica si ya se encuentra limpia (en el caso del modo demo) o si está cruda (al ser subida externamente por el usuario). A partir de esto, redirige la petición a los endpoints correctos de la API para aplicar un filtro paso-banda en tiempo real.
+
+- Implementa técnicas de interpretabilidad clínica. Con un solo clic, el sistema genera un mapa de calor detallado sobre la señal, permitiendo entender con precisión qué regiones y partes específicas de la onda del ECG activaron las alarmas para el diagnóstico de una u otra enfermedad.
+
 ## Estructura del repositorio
 
 ```
@@ -554,6 +580,7 @@ carpeta `data/`.
 > (`OSError: WinError 1114`) en pruebas locales. Ver el problema 4 más
 > arriba.
 
+
 ## Próximos pasos
 
 - [x] Exploración de metadatos y calidad de datos (EDA)
@@ -563,6 +590,8 @@ carpeta `data/`.
 - [x] Evaluación con AUROC / AUPRC por categoría diagnóstica
 - [x] Explicabilidad con Grad-CAM 1D
 - [x] Despliegue como API con FastAPI
+- [x] Interfaz web interactiva en Streamlit con soporte bilingüe (Español/Inglés)
+- [x] Soporte para lectura y diagnóstico de archivos PhysioNet externos (.hea / .dat)
 
 ## Consideraciones éticas y de sesgos
 
