@@ -507,18 +507,25 @@ en lugar de una suposición sin verificar.
 
 ## Interfaz web interactiva (Streamlit)
 
-Para facilitar el uso del modelo sin necesidad de enviar peticiones HTTP manualmente, se desarrolló una aplicación web con **Streamlit**:
+Para facilitar el uso del modelo de forma visual y no depender de peticiones HTTP manuales, se desarrolló una aplicación web utilizando **Streamlit**.
 
-```bash
+Al estar el proyecto estructurado con el backend (la red neuronal en FastAPI) y el frontend (la interfaz web) separados, **necesitas ejecutar ambos servicios a la vez** para que la app pueda analizar las señales. Abre dos terminales en la carpeta raíz del proyecto:
+
+**En la Terminal 1 (levanta la API REST):**
+uvicorn src.api:app --reload
+**En la Terminal 2 (levanta la interfaz gráfica):**
 streamlit run app/streamlit_app.py
+### Funcionalidades principales:
 
- - Permite cargar ejemplos de prueba precargados en el sistema para evaluar su comportamiento. La interfaz muestra los datos demográficos del paciente (como edad y sexo) y ofrece una comparación visual directa para verificar si la predicción del modelo acierta con el diagnóstico real.
+* - Interfaz conmutable entre español e inglés.
 
-- Cuenta con una pestaña dedicada para la subida de archivos médicos reales en formatos estándar de la industria (combinación de archivos `.hea` y `.dat` de PhysioNet). El sistema se encarga de ingerir los datos crudos, adaptarlos y enviarlos directamente a la red neuronal para su procesamiento.
+* - Permite cargar ejemplos de prueba del dataset PTB-XL, mostrar sus datos demográficos (edad, sexo) y comparar el diagnóstico real del paciente con la predicción del modelo.
 
-- La interfaz detecta de forma automatizada el estado de la señal: identifica si ya se encuentra limpia (en el caso del modo demo) o si está cruda (al ser subida externamente por el usuario). A partir de esto, redirige la petición a los endpoints correctos de la API para aplicar un filtro paso-banda en tiempo real.
+* - Habilita una pestaña dedicada para subir archivos crudos reales extraídos de entornos clínicos en formato PhysioNet (combinación de cabecera `.hea` y datos binarios `.dat`).
 
-- Implementa técnicas de interpretabilidad clínica. Con un solo clic, el sistema genera un mapa de calor detallado sobre la señal, permitiendo entender con precisión qué regiones y partes específicas de la onda del ECG activaron las alarmas para el diagnóstico de una u otra enfermedad.
+* - La interfaz detecta automáticamente el origen de la señal. Si proviene de la demo, envía los datos a la API para evaluarla. Si el usuario sube un archivo crudo externo, redirige la petición a los endpoints que aplican el filtrado paso-banda y la normalización Z-score en tiempo real.
+
+* - Genera mapas de calor interactivos sobre la señal para mostrar en qué momentos exactos del latido se fijó la red neuronal para tomar su decisión. 
 
 ## Estructura del repositorio
 
