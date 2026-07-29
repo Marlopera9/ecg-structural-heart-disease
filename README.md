@@ -505,6 +505,7 @@ representativa de otras poblaciones. Este análisis convierte esa
 advertencia genérica en una limitación cuantificada y documentada,
 en lugar de una suposición sin verificar.
 
+
 ## Interfaz web interactiva (Streamlit)
 
 Para facilitar el uso del modelo de forma visual y no depender de peticiones HTTP manuales, se desarrolló una aplicación web utilizando **Streamlit**.
