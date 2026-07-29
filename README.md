@@ -518,15 +518,15 @@ uvicorn src.api:app --reload
 streamlit run app/streamlit_app.py
 ### Funcionalidades principales:
 
-* - Interfaz conmutable entre español e inglés.
+* Interfaz conmutable entre español e inglés.
 
-* - Permite cargar ejemplos de prueba del dataset PTB-XL, mostrar sus datos demográficos (edad, sexo) y comparar el diagnóstico real del paciente con la predicción del modelo.
+* Permite cargar ejemplos de prueba del dataset PTB-XL, mostrar sus datos demográficos (edad, sexo) y comparar el diagnóstico real del paciente con la predicción del modelo.
 
-* - Habilita una pestaña dedicada para subir archivos crudos reales extraídos de entornos clínicos en formato PhysioNet (combinación de cabecera `.hea` y datos binarios `.dat`).
+* Habilita una pestaña dedicada para subir archivos crudos reales extraídos de entornos clínicos en formato PhysioNet (combinación de cabecera `.hea` y datos binarios `.dat`).
 
-* - La interfaz detecta automáticamente el origen de la señal. Si proviene de la demo, envía los datos a la API para evaluarla. Si el usuario sube un archivo crudo externo, redirige la petición a los endpoints que aplican el filtrado paso-banda y la normalización Z-score en tiempo real.
+* La interfaz detecta automáticamente el origen de la señal. Si proviene de la demo, envía los datos a la API para evaluarla. Si el usuario sube un archivo crudo externo, redirige la petición a los endpoints que aplican el filtrado paso-banda y la normalización Z-score en tiempo real.
 
-* - Genera mapas de calor interactivos sobre la señal para mostrar en qué momentos exactos del latido se fijó la red neuronal para tomar su decisión. 
+* Genera mapas de calor interactivos sobre la señal para mostrar en qué momentos exactos del latido se fijó la red neuronal para tomar su decisión. 
 
 ## Estructura del repositorio
 
